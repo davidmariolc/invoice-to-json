@@ -1,23 +1,15 @@
-# FastAPI Starter
+# Invoice to JSON API
 
-Deploy your [FastAPI](https://fastapi.tiangolo.com/) project to Vercel with zero configuration.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/fastapi&template=fastapi)
-
-_Live Example: https://vercel-plus-fastapi.vercel.app/_
-
-Visit the [FastAPI documentation](https://fastapi.tiangolo.com/) to learn more.
+FastAPI backend for the frontend in `../web`. Application endpoints return JSON; the frontend handles the user interface.
 
 ## Project Structure
 
-This example follows the [larger applications](https://fastapi.tiangolo.com/tutorial/bigger-applications/) pattern from the FastAPI docs:
+The API follows the [larger applications](https://fastapi.tiangolo.com/tutorial/bigger-applications/) pattern from the FastAPI docs:
 
 ```
 app/
 ├── __init__.py
 ├── main.py              # FastAPI application entry point
-├── templates/
-│   └── index.html       # Landing page template
 ├── api/
 │   ├── __init__.py
 │   ├── main.py          # API router assembly
@@ -41,17 +33,18 @@ uv sync
 ## Running Locally
 
 ```bash
-vercel dev
+uv run uvicorn app.main:app --reload --port 5001
 ```
 
 ## API Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/` | Landing page |
 | `GET` | `/api/v1/items/` | List sample items |
 | `GET` | `/api/v1/items/{item_id}` | Get item by ID |
 | `GET` | `/docs` | Interactive API docs (Swagger UI) |
+
+There is no application page at `/`. Open the frontend separately from `../web`.
 
 ## Deploying to Vercel
 
@@ -63,5 +56,3 @@ vercel --prod
 ```
 
 Or `git push` to your repository with our [git integration](https://vercel.com/docs/deployments/git).
-
-To view the source code for this template, [visit the example repository](https://github.com/vercel/vercel/tree/main/examples/fastapi).
