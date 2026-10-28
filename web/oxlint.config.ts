@@ -5,7 +5,8 @@ import react from "ultracite/oxlint/react";
 export default defineConfig({
   env: core.env,
   extends: [core, react],
-  ignorePatterns: core.ignorePatterns,
+  // Installed skills include third-party examples and tooling, outside the app.
+  ignorePatterns: [...(core.ignorePatterns ?? []), ".agents/skills/**"],
   rules: {
     "react/only-export-components": [
       "warn",
