@@ -17,4 +17,14 @@ export default defineConfig({
       "@": fileURLToPath(new URL("src", import.meta.url)),
     },
   },
+  server: {
+    proxy: {
+      "/api": {
+        changeOrigin: true,
+        proxyTimeout: 120_000,
+        target: "http://127.0.0.1:5001",
+        timeout: 120_000,
+      },
+    },
+  },
 });

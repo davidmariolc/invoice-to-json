@@ -1,6 +1,47 @@
-# React + TypeScript + Vite
+# Invoice to JSON Web
 
-This template provides a minimal setup to get React working in Vite with HMR and Ultracite's Oxlint and Oxfmt presets.
+React frontend for uploading invoice images and viewing the extracted data as JSON. Uses Vite, Tailwind CSS, shadcn/ui, React Hook Form, Zod, and Ultracite.
+
+## Project structure
+
+```text
+src/
+├── app.tsx                          # Page composition and processing state
+├── features/
+│   └── invoices/
+│       ├── components/
+│       │   ├── invoice-upload-form.tsx
+│       │   └── invoice-output.tsx
+│       ├── api.ts                   # Multipart API request and response validation
+│       └── schemas.ts               # Invoice validation schemas and types
+├── components/
+│   └── ui/                          # Shared shadcn/ui components
+└── lib/
+    └── utils.ts                     # General utilities
+```
+
+Import invoice modules directly from `@/features/invoices/`. Shared UI components and general utilities stay in `@/components/ui/` and `@/lib/`.
+
+## Running locally
+
+Start FastAPI in a separate terminal, with `GEMINI_API_KEY` set in `../fastapi/.env`:
+
+```bash
+cd ../fastapi
+uv sync
+uv run uvicorn app.main:app --reload --port 5001
+```
+
+From this `web` directory, start the frontend:
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Select a JPG, PNG, or WEBP image up to 10 MB and click **Subir factura**. The frontend posts multipart form data to `/api/v1/invoices/process`; Vite proxies `/api` requests to `http://127.0.0.1:5001` during development. Production hosting must also route `/api` to FastAPI.
+
+The result panel displays the validated invoice JSON with English properties such as `invoice_number`, `issue_date`, `issuer`, `recipient`, and `items`, including nullable unreadable fields. Changing or removing an image clears previous results. Upload controls are disabled while processing, and failures leave the image available for another attempt. No API key is exposed to the frontend.
 
 Currently, two official plugins are available:
 
@@ -22,6 +63,8 @@ pnpm check
 pnpm fix
 pnpm exec ultracite doctor
 ```
+
+Run `pnpm check` for linting and formatting, and `pnpm build` for TypeScript checks and the production build. These commands do not call the backend or the model.
 
 `pnpm lint` also runs the lint and formatting checks. `oxlint.config.ts` extends `ultracite/oxlint/core` and `ultracite/oxlint/react`, preserving the existing Fast Refresh export rule after the presets. The rules of hooks are included in the React preset. `oxfmt.config.ts` extends `ultracite/oxfmt`.
 
