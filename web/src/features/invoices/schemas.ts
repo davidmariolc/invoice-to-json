@@ -6,7 +6,7 @@ export const invoiceImageSchema = z
     error: "Elige una imagen JPG, PNG o WEBP.",
   })
   .min(1, { error: "La imagen está vacía. Selecciona otro archivo." })
-  .max(10 * 1024 * 1024, { error: "La imagen no debe superar los 10 MB." });
+  .max(4 * 1024 * 1024, { error: "La imagen no debe superar los 4 MB." });
 
 export const invoiceFormSchema = z.object({ invoice: invoiceImageSchema });
 export type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;

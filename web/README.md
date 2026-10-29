@@ -39,7 +39,7 @@ pnpm install
 pnpm dev
 ```
 
-Select a JPG, PNG, or WEBP image up to 10 MB and click **Subir factura**. The frontend posts multipart form data to `/api/v1/invoices/process`; Vite proxies `/api` requests to `http://127.0.0.1:5001` during development. Production hosting must also route `/api` to FastAPI.
+Select a JPG, PNG, or WEBP image up to 4 MB and click **Subir factura**. The frontend posts multipart form data to `/api/v1/invoices/process`; Vite proxies `/api` requests to `http://127.0.0.1:5001` during development. The repository-root `vercel.json` routes production `/api` requests to the FastAPI service and other paths to the Vite service. Deploy from the repository root; see `../README.md`.
 
 The result panel displays the validated invoice JSON with English properties such as `invoice_number`, `issue_date`, `issuer`, `recipient`, and `items`, including nullable unreadable fields. Changing or removing an image clears previous results. Upload controls are disabled while processing, and failures leave the image available for another attempt. No API key is exposed to the frontend.
 

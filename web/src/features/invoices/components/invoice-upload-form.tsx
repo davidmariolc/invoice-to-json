@@ -188,7 +188,7 @@ export const InvoiceUploadForm = ({
                 </div>
               </div>
               <FieldDescription id="invoice-help">
-                JPG, PNG o WEBP · Máximo 10 MB
+                JPG, PNG o WEBP · Máximo 4 MB
               </FieldDescription>
               {fieldState.error && (
                 <FieldError errors={[fieldState.error]} id="invoice-error" />

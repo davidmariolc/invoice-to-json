@@ -4,7 +4,7 @@ from typing import BinaryIO
 
 from PIL import Image, UnidentifiedImageError
 
-MAX_IMAGE_BYTES = 10 * 1024 * 1024
+MAX_IMAGE_BYTES = 4 * 1024 * 1024
 IMAGE_FORMATS = {"image/jpeg": "JPEG", "image/png": "PNG", "image/webp": "WEBP"}
 
 
@@ -32,7 +32,7 @@ def read_invoice_image(file: BinaryIO, mime_type: str) -> tuple[bytes, str]:
     if not contents:
         raise InvalidImageError("La imagen está vacía.")
     if len(contents) > MAX_IMAGE_BYTES:
-        raise ImageTooLargeError("La imagen no debe superar los 10 MB.")
+        raise ImageTooLargeError("La imagen no debe superar los 4 MB.")
 
     try:
         with warnings.catch_warnings():

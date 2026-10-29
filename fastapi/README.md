@@ -64,7 +64,7 @@ There is no application page at `/`. Open the frontend separately from `../web`.
 
 ## Processing invoices
 
-Submit a JPEG, PNG or WEBP image, up to 10 MB, as multipart form data:
+Submit a JPEG, PNG or WEBP image, up to 4 MB, as multipart form data:
 
 ```bash
 curl -X POST http://localhost:5001/api/v1/invoices/process \
@@ -89,11 +89,17 @@ The invoice endpoint and Gemini provider tests replace the provider client with 
 
 ## Deploying to Vercel
 
-Deploy your project to Vercel with the following command:
+Deploy from the repository root, where `vercel.json` defines the FastAPI and Vite services:
 
 ```bash
-npm install -g vercel
-vercel --prod
+cd ..
+vercel
 ```
 
-Or `git push` to your repository with our [git integration](https://vercel.com/docs/deployments/git).
+Use the repository root as the Vercel project's Root Directory, leaving its framework preset as Other. Services builds `fastapi/` and `web/` independently and deploys them together. `/api/*`, `/docs`, `/redoc`, and `/openapi.json` go to FastAPI; other paths go to Vite, including SPA deep links.
+
+Set `GEMINI_API_KEY` as a Secret environment variable in Vercel for Preview and Production before deploying. Keep it out of client-side `VITE_*` variables. The frontend uses the same-origin `/api/v1/invoices/process` URL, so no production API URL or CORS setting is needed.
+
+The application limits images to 4 MB to leave room for multipart overhead within Vercel Functions' 4.5 MB request limit. The backend function allows 90 seconds; Gemini has a 60-second timeout.
+
+Use `vercel --prod` from the repository root for production, or connect the repository to [Vercel Git integration](https://vercel.com/docs/deployments/git). See [FastAPI on Vercel](https://vercel.com/docs/frameworks/backend/fastapi) and [Vercel Services](https://vercel.com/docs/services).

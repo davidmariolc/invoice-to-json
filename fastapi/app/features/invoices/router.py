@@ -25,7 +25,7 @@ router = APIRouter(prefix="/invoices", tags=["invoices"])
 
 @router.post("/process", response_model=InvoiceProcessResponse)
 def process_invoice(
-    file: Annotated[UploadFile, File(description="Imagen JPG, PNG o WEBP de hasta 10 MB.")],
+    file: Annotated[UploadFile, File(description="Imagen JPG, PNG o WEBP de hasta 4 MB.")],
 ) -> InvoiceProcessResponse:
     try:
         contents, mime_type = read_invoice_image(file.file, file.content_type or "")

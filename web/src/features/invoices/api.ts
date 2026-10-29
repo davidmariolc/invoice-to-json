@@ -31,6 +31,10 @@ export const processInvoice = async (
     );
   }
 
+  if (response.status === 413) {
+    throw new Error("La imagen no debe superar los 4 MB.");
+  }
+
   let payload: unknown;
   try {
     payload = await response.json();
