@@ -59,7 +59,7 @@ const App = () => {
             DE DOCUMENTO A DATOS
           </p>
           <h1 className="max-w-2xl text-3xl font-medium tracking-tight sm:text-4xl">
-            Una factura. Todos sus datos
+            Una factura. Todos sus datos.
           </h1>
           <p className="text-muted-foreground max-w-xl text-sm leading-6">
             Sube la imagen de una factura y consulta el resultado de su
