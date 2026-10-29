@@ -3,8 +3,8 @@ import base64
 from pydantic import ValidationError
 
 from app.ai.providers.gemini import generate_text
-from app.invoices.prompts import EXTRACTION_PROMPT
-from app.invoices.schemas import InvoiceExtraction, InvoiceProcessResponse
+from app.features.invoices.prompts import EXTRACTION_PROMPT
+from app.features.invoices.schemas import InvoiceExtraction, InvoiceProcessResponse
 
 
 class InvalidExtractionError(ValueError):

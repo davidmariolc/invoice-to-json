@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
-from app.api.main import api_router
 from app.core.config import settings
+from app.features.invoices.router import router as invoices_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -9,7 +9,7 @@ app = FastAPI(
     version=settings.VERSION,
 )
 
-app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(invoices_router, prefix=settings.API_V1_STR)
 
 if __name__ == "__main__":
     import uvicorn

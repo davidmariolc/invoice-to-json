@@ -7,14 +7,14 @@ from app.ai.providers.gemini import (
     GeminiError,
     GeminiTimeoutError,
 )
-from app.invoices.images import (
+from app.features.invoices.images import (
     ImageTooLargeError,
     InvalidImageError,
     UnsupportedImageError,
     read_invoice_image,
 )
-from app.invoices.schemas import InvoiceProcessResponse
-from app.invoices.service import (
+from app.features.invoices.schemas import InvoiceProcessResponse
+from app.features.invoices.service import (
     InvalidExtractionError,
     UnreadableInvoiceError,
     extract_invoice,

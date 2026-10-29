@@ -4,27 +4,21 @@ FastAPI backend for the frontend in `../web`. Application endpoints return JSON;
 
 ## Project Structure
 
-The API groups invoice functionality in `app/invoices/` and keeps the shared Gemini provider and configuration separate:
+The API groups business functionality under `app/features/`, with invoice functionality in `app/features/invoices/`, and keeps the shared Gemini provider and configuration separate:
 
 ```
 app/
 ├── __init__.py
 ├── main.py              # FastAPI application entry point
-├── api/
+├── features/
 │   ├── __init__.py
-│   ├── main.py          # API router assembly
-│   ├── deps.py          # Shared dependencies
-│   └── routes/
+│   └── invoices/
 │       ├── __init__.py
-│       ├── gemini.py    # Gemini model test endpoint
-│       └── items.py     # Item endpoints
-├── invoices/
-│   ├── __init__.py
-│   ├── router.py        # Invoice HTTP endpoint and error translation
-│   ├── schemas.py       # Pydantic invoice models
-│   ├── service.py       # Extraction coordination and result validation
-│   ├── images.py        # Image stream reading and validation
-│   └── prompts.py       # Extraction instructions
+│       ├── router.py    # Invoice HTTP endpoint and error translation
+│       ├── schemas.py   # Pydantic invoice models
+│       ├── service.py   # Extraction coordination and result validation
+│       ├── images.py    # Image stream reading and validation
+│       └── prompts.py   # Extraction instructions
 ├── ai/
 │   ├── __init__.py
 │   └── providers/
@@ -35,7 +29,7 @@ app/
     └── config.py        # Application settings
 ```
 
-`app/api/main.py` assembles the routers. Invoice processing, image validation, and the Gemini provider do not depend on FastAPI or HTTP types. The HTTP routers translate their exceptions into the existing status codes and messages. The Gemini test endpoint remains in `app/api/routes/gemini.py`; shared settings remain in `app/core/`.
+`app/main.py` registers the invoice router directly with the `/api/v1` prefix. Invoice processing, image validation, and the Gemini provider do not depend on FastAPI or HTTP types. The HTTP router translates their exceptions into the existing status codes and messages. The shared Gemini client lives in `app/ai/providers/gemini.py`; shared settings remain in `app/core/`.
 
 ## Getting Started
 
@@ -63,9 +57,6 @@ uv run uvicorn app.main:app --reload --port 5001
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/v1/items/` | List sample items |
-| `GET` | `/api/v1/items/{item_id}` | Get item by ID |
-| `POST` | `/api/v1/gemini/test` | Test Gemini using the OpenAI-compatible API |
 | `POST` | `/api/v1/invoices/process` | Extract invoice data from an image |
 | `GET` | `/docs` | Interactive API docs (Swagger UI) |
 
@@ -86,17 +77,7 @@ The backend verifies the image's actual format, sends it to `gemini-3.5-flash-li
 
 The frontend in `../web` sends files to this endpoint through Vite's `/api` development proxy, which targets `http://127.0.0.1:5001`. Keep both development servers running. `GEMINI_API_KEY` is read only by the backend.
 
-## Testing Gemini
-
-Set `GEMINI_API_KEY` in `.env`, start the server, and run:
-
-```bash
-curl -X POST http://localhost:5001/api/v1/gemini/test
-```
-
-The endpoint sends `Explain closures in one paragraph.` to `gemini-3.5-flash-lite` and returns JSON with `model` and `content`. It uses the OpenAI SDK with Google's compatible API endpoint. Each request makes a real model call.
-
-A missing key returns HTTP 503. Connection errors, provider errors, or an empty response return HTTP 502; a timeout returns HTTP 504.
+## Testing
 
 Run the backend tests without making external API calls:
 
@@ -104,7 +85,7 @@ Run the backend tests without making external API calls:
 uv run python -m unittest discover -s tests -v
 ```
 
-The endpoint tests replace the provider client with an in-memory mock transport and block unexpected provider calls. Service and image tests also run locally, without a real API key or paid model requests.
+The invoice endpoint and Gemini provider tests replace the provider client with an in-memory mock transport and block unexpected provider calls. Service and image tests also run locally, without a real API key or paid model requests.
 
 ## Deploying to Vercel
 

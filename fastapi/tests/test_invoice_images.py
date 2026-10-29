@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from app.invoices.images import (
+from app.features.invoices.images import (
     IMAGE_FORMATS,
     MAX_IMAGE_BYTES,
     ImageTooLargeError,

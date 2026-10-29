@@ -9,7 +9,7 @@ from openai import OpenAI
 from PIL import Image
 from pydantic import SecretStr
 
-from app.invoices.images import MAX_IMAGE_BYTES
+from app.features.invoices.images import MAX_IMAGE_BYTES
 from app.core.config import settings
 from app.main import app
 from app.ai.providers.gemini import (
@@ -132,7 +132,7 @@ class InvoiceRouteTests(unittest.IsolatedAsyncioTestCase):
         ]
         for error, expected_status in cases:
             with self.subTest(error=error), patch(
-                "app.invoices.service.generate_text", side_effect=error,
+                "app.features.invoices.service.generate_text", side_effect=error,
             ):
                 response = await self.client.post(
                     "/api/v1/invoices/process",
