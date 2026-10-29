@@ -73,7 +73,7 @@ curl -X POST http://localhost:5001/api/v1/invoices/process \
 
 The response contains `model`, `filename`, and `data`. All invoice properties use English snake_case: `invoice_number`, `issue_date`, `currency`, `issuer`, `recipient`, `items`, `subtotal`, `taxes`, and `total`. Parties contain `name`, `tax_id`, and `address`; items contain `description`, `quantity`, `unit_price`, and `amount`. Missing or unreadable fields are `null`. Text values retain the document's original language.
 
-The backend verifies the image's actual format, sends it to `gemini-3.5-flash-lite` through the OpenAI-compatible API, requests a JSON Schema response, and validates the result with Pydantic. Unreadable or unrelated documents return HTTP 422; invalid model responses return HTTP 502. Uploaded files are closed after reading and are not stored permanently.
+The backend verifies the image's actual format, sends it as inline image data to `gemini-3.5-flash-lite` through Google's native `google-genai` SDK, requests a JSON Schema response, and validates the result with Pydantic. The client uses a 60-second timeout and makes one attempt per request. Unreadable or unrelated documents return HTTP 422; invalid model responses return HTTP 502. Uploaded files are closed after reading and are not stored permanently.
 
 The frontend in `../web` sends files to this endpoint through Vite's `/api` development proxy, which targets `http://127.0.0.1:5001`. Keep both development servers running. `GEMINI_API_KEY` is read only by the backend.
 

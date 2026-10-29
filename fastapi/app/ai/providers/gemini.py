@@ -1,6 +1,8 @@
-from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
-from openai.types.chat import ChatCompletionMessageParam
-from openai.types.shared_params import ResponseFormatJSONSchema
+from typing import Any
+
+import httpx
+from google import genai
+from google.genai import errors, types
 
 from app.core.config import settings
 
@@ -20,47 +22,65 @@ class GeminiTimeoutError(GeminiError):
 
 
 def generate_text(
-    messages: list[ChatCompletionMessageParam],
-    response_format: ResponseFormatJSONSchema | None = None,
+    prompt: str,
+    *,
+    system_instruction: str | None = None,
+    image: bytes | None = None,
+    mime_type: str | None = None,
+    response_json_schema: dict[str, Any] | None = None,
 ) -> tuple[str, str]:
     if settings.GEMINI_API_KEY is None:
         raise GeminiConfigurationError(
             "Configura GEMINI_API_KEY en el archivo .env de FastAPI.",
         )
 
-    options = {"response_format": response_format} if response_format else {}
+    parts = [types.Part.from_text(text=prompt)]
+    if image is not None:
+        if not mime_type:
+            raise ValueError("An image MIME type is required.")
+        parts.append(types.Part.from_bytes(data=image, mime_type=mime_type))
+
     try:
-        with OpenAI(
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        with genai.Client(
             api_key=settings.GEMINI_API_KEY.get_secret_value(),
-            timeout=60.0,
-            max_retries=0,
+            http_options=types.HttpOptions(
+                timeout=60_000,
+                retry_options=types.HttpRetryOptions(attempts=1),
+            ),
         ) as client:
-            response = client.chat.completions.create(
+            response = client.models.generate_content(
                 model=MODEL,
-                messages=messages,
-                **options,
+                contents=types.Content(role="user", parts=parts),
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    response_mime_type="application/json" if response_json_schema else None,
+                    response_json_schema=response_json_schema,
+                ),
             )
-    except APITimeoutError as exc:
+    except httpx.TimeoutException as exc:
         raise GeminiTimeoutError(
             "Gemini no respondió dentro del tiempo de espera. Intenta de nuevo.",
         ) from exc
-    except APIConnectionError as exc:
+    except httpx.RequestError as exc:
         raise GeminiError(
             "No se pudo conectar con la API de Gemini. Intenta de nuevo.",
         ) from exc
-    except APIStatusError as exc:
+    except errors.APIError as exc:
+        if exc.code == 504:
+            raise GeminiTimeoutError(
+                "Gemini no respondió dentro del tiempo de espera. Intenta de nuevo.",
+            ) from exc
         raise GeminiError(
-            f"Gemini devolvió HTTP {exc.status_code} al consultar {MODEL}.",
+            f"Gemini devolvió HTTP {exc.code} al consultar {MODEL}.",
         ) from exc
 
-    content = response.choices[0].message.content if response.choices else None
+    content = response.text
     if not content or not content.strip():
         raise GeminiError(
             "Gemini no devolvió una respuesta de texto.",
         )
-    if response.choices[0].finish_reason == "length":
+    if not response.candidates or response.candidates[0].finish_reason != types.FinishReason.STOP:
         raise GeminiError(
             "Gemini devolvió una respuesta incompleta. Intenta con una imagen más simple.",
         )
-    return response.model, content
+    return response.model_version or MODEL, content

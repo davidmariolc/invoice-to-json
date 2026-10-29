@@ -2,8 +2,8 @@ import json
 import unittest
 from unittest.mock import patch
 
-import httpx2
-from openai import OpenAI
+import httpx
+from google.genai import Client
 from pydantic import SecretStr
 
 from app.ai.providers.gemini import (
@@ -15,97 +15,95 @@ from app.ai.providers.gemini import (
 )
 from app.core.config import settings
 
-MESSAGES = [{"role": "user", "content": "Explain closures in one paragraph."}]
+PROMPT = "Explain closures in one paragraph."
 
 
-def completion_body(content="A closure retains access to its enclosing scope.", choices=None):
+def completion_body(content="A closure retains access to its enclosing scope.", candidates=None):
     return {
-        "id": "test-completion",
-        "object": "chat.completion",
-        "created": 0,
-        "model": MODEL,
-        "choices": choices if choices is not None else [
-            {
-                "index": 0,
-                "finish_reason": "stop",
-                "message": {"role": "assistant", "content": content},
-            }
-        ],
+        "modelVersion": MODEL,
+        "candidates": candidates if candidates is not None else [{
+            "content": {"role": "model", "parts": [{"text": content}]},
+            "finishReason": "STOP",
+        }],
     }
 
 
 class GeminiProviderTests(unittest.TestCase):
     def setUp(self):
         self.enterContext(patch(
-            "app.ai.providers.gemini.OpenAI",
+            "app.ai.providers.gemini.genai.Client",
             side_effect=AssertionError("Unexpected provider call: use a mock transport."),
         ))
 
     def request_with_provider(self, handler):
         def create_client(**kwargs):
-            return OpenAI(
-                **kwargs,
-                http_client=httpx2.Client(transport=httpx2.MockTransport(handler)),
-            )
+            options = kwargs["http_options"]
+            self.assertEqual(options.timeout, 60_000)
+            self.assertEqual(options.retry_options.attempts, 1)
+            kwargs["http_options"] = options.model_copy(update={
+                "client_args": {"transport": httpx.MockTransport(handler)},
+            })
+            return Client(**kwargs)
 
         with (
             patch.object(settings, "GEMINI_API_KEY", SecretStr("test-key")),
-            patch("app.ai.providers.gemini.OpenAI", side_effect=create_client),
+            patch("app.ai.providers.gemini.genai.Client", side_effect=create_client),
         ):
-            return generate_text(MESSAGES)
+            return generate_text(PROMPT)
 
     def test_sends_expected_request_and_returns_generated_text(self):
         def handler(request):
             self.assertEqual(request.method, "POST")
             self.assertEqual(
                 str(request.url),
-                "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent",
             )
-            self.assertEqual(request.headers["authorization"], "Bearer test-key")
-            self.assertEqual(
-                json.loads(request.content),
-                {
-                    "model": "gemini-3.5-flash-lite",
-                    "messages": [
-                        {"role": "user", "content": "Explain closures in one paragraph."}
-                    ],
-                },
-            )
-            return httpx2.Response(200, json=completion_body())
+            self.assertEqual(request.headers["x-goog-api-key"], "test-key")
+            self.assertEqual(json.loads(request.content)["contents"], [{
+                "role": "user", "parts": [{"text": PROMPT}],
+            }])
+            self.assertNotIn("responseMimeType", json.loads(request.content).get("generationConfig", {}))
+            return httpx.Response(200, json=completion_body())
 
-        response = self.request_with_provider(handler)
-        self.assertEqual(response, (
+        self.assertEqual(self.request_with_provider(handler), (
             MODEL, "A closure retains access to its enclosing scope.",
         ))
 
     def test_missing_key_raises_configuration_error_without_calling_provider(self):
         with (
             patch.object(settings, "GEMINI_API_KEY", None),
-            patch("app.ai.providers.gemini.OpenAI") as client,
+            patch("app.ai.providers.gemini.genai.Client") as client,
         ):
             with self.assertRaises(GeminiConfigurationError):
-                generate_text(MESSAGES)
+                generate_text(PROMPT)
         client.assert_not_called()
 
     def test_timeout_raises_timeout_error(self):
+        calls = []
+
         def handler(request):
-            raise httpx2.ReadTimeout("Test timeout", request=request)
+            calls.append(request)
+            raise httpx.ReadTimeout("Test timeout", request=request)
 
         with self.assertRaises(GeminiTimeoutError):
             self.request_with_provider(handler)
+        self.assertEqual(len(calls), 1)
 
     def test_connection_failure_raises_provider_error(self):
         def handler(request):
-            raise httpx2.ConnectError("Test connection error", request=request)
+            raise httpx.ConnectError("Test connection error", request=request)
 
         with self.assertRaises(GeminiError):
             self.request_with_provider(handler)
 
-    def test_provider_errors_do_not_expose_raw_details(self):
+    def test_provider_errors_do_not_expose_raw_details_or_retry(self):
         for provider_status in (401, 404, 429, 500):
             with self.subTest(provider_status=provider_status):
+                calls = []
+
                 def handler(request):
-                    return httpx2.Response(provider_status, json={
+                    calls.append(request)
+                    return httpx.Response(provider_status, json={
                         "error": {"message": "private provider details", "code": provider_status}
                     })
 
@@ -115,27 +113,37 @@ class GeminiProviderTests(unittest.TestCase):
                 self.assertIn(str(provider_status), message)
                 self.assertNotIn("private provider details", message)
                 self.assertNotIn("test-key", message)
+                self.assertEqual(len(calls), 1)
+
+    def test_provider_deadline_raises_timeout_error(self):
+        with self.assertRaises(GeminiTimeoutError):
+            self.request_with_provider(lambda request: httpx.Response(504, json={
+                "error": {"code": 504, "message": "private timeout details", "status": "DEADLINE_EXCEEDED"},
+            }))
 
     def test_empty_responses_raise_provider_error(self):
         for body in (
-            completion_body(choices=[]),
+            completion_body(candidates=[]),
+            completion_body(candidates=[{"finishReason": "SAFETY"}]),
             completion_body(content=None),
             completion_body(content=""),
             completion_body(content="   "),
         ):
-            with self.subTest(body=body):
-                with self.assertRaises(GeminiError):
-                    self.request_with_provider(
-                        lambda request: httpx2.Response(200, json=body)
-                    )
+            with self.subTest(body=body), self.assertRaises(GeminiError):
+                self.request_with_provider(lambda request: httpx.Response(200, json=body))
 
-    def test_truncated_response_raises_provider_error(self):
+    def test_incomplete_responses_raise_provider_error(self):
+        for reason in ("MAX_TOKENS", "SAFETY", None):
+            body = completion_body()
+            body["candidates"][0]["finishReason"] = reason
+            with self.subTest(reason=reason), self.assertRaisesRegex(GeminiError, "respuesta incompleta"):
+                self.request_with_provider(lambda request: httpx.Response(200, json=body))
+
+    def test_missing_model_version_uses_requested_model(self):
         body = completion_body()
-        body["choices"][0]["finish_reason"] = "length"
-        with self.assertRaisesRegex(GeminiError, "respuesta incompleta"):
-            self.request_with_provider(
-                lambda request: httpx2.Response(200, json=body)
-            )
+        del body["modelVersion"]
+        model, _ = self.request_with_provider(lambda request: httpx.Response(200, json=body))
+        self.assertEqual(model, MODEL)
 
 
 if __name__ == "__main__":
