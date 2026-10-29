@@ -8,9 +8,11 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useController, useForm } from "react-hook-form";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -26,6 +28,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { exampleInvoice } from "@/features/invoices/example";
 import {
   invoiceFormSchema,
   invoiceImageSchema,
@@ -33,14 +36,74 @@ import {
 import type { InvoiceFormValues } from "@/features/invoices/schemas";
 
 interface InvoiceUploadFormProps {
+  isExample: boolean;
   isProcessing: boolean;
   onImageChange: () => void;
+  onReset: () => void;
   onUpload: (file: File) => Promise<void>;
 }
 
+interface InvoiceImagePreviewProps {
+  filename: string | undefined;
+  isExample: boolean;
+  onError: () => void;
+  onReady: () => void;
+  src: string | null;
+}
+
+const InvoiceImagePreview = ({
+  filename,
+  isExample,
+  onError,
+  onReady,
+  src,
+}: InvoiceImagePreviewProps) => {
+  if (!src) {
+    return (
+      <span className="bg-background text-muted-foreground flex size-12 items-center justify-center border">
+        <UploadSimpleIcon aria-hidden="true" size={24} weight="light" />
+      </span>
+    );
+  }
+  return (
+    <img
+      alt={
+        isExample
+          ? "Factura de ejemplo DEMO-000123 con datos ficticios"
+          : `Vista previa de ${filename ?? "la factura"}`
+      }
+      className={
+        isExample
+          ? "max-h-[28rem] w-full object-contain"
+          : "max-h-44 max-w-full object-contain"
+      }
+      onError={() => {
+        if (!isExample) {
+          onError();
+        }
+      }}
+      onLoad={() => {
+        if (!isExample) {
+          onReady();
+        }
+      }}
+      src={src}
+    />
+  );
+};
+
+const getUploadLabel = (isExample: boolean, isProcessing: boolean) => {
+  if (isExample) {
+    return "Subir mi factura";
+  }
+  return isProcessing ? "Procesando factura…" : "Subir factura";
+};
+
 export const InvoiceUploadForm = ({
+  isExample,
   isProcessing,
   onImageChange,
+  onReset,
   onUpload,
 }: InvoiceUploadFormProps) => {
   const { control, handleSubmit, reset, setError, setValue } =
@@ -57,6 +120,8 @@ export const InvoiceUploadForm = ({
   const [preview, setPreview] = useState<string | null>(null);
   const [isPreviewReady, setIsPreviewReady] = useState(false);
   const previewUrl = useRef<string | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  const displayPreview = isExample ? exampleInvoice.imageUrl : preview;
 
   useEffect(
     () => () => {
@@ -90,7 +155,7 @@ export const InvoiceUploadForm = ({
   const resetForm = () => {
     reset();
     clearPreview();
-    onImageChange();
+    onReset();
   };
 
   return (
@@ -103,8 +168,15 @@ export const InvoiceUploadForm = ({
           <h2>Sube tu factura</h2>
         </CardTitle>
         <CardDescription>
-          Empieza con una imagen clara y legible.
+          {isExample
+            ? "Una factura ficticia para mostrarte cómo funciona."
+            : "Empieza con una imagen clara y legible."}
         </CardDescription>
+        {isExample && (
+          <CardAction>
+            <Badge variant="outline">Ejemplo</Badge>
+          </CardAction>
+        )}
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4">
         <form
@@ -150,35 +222,28 @@ export const InvoiceUploadForm = ({
                       selectFile(file);
                     }
                   }}
-                  ref={imageRef}
+                  ref={(element) => {
+                    imageRef(element);
+                    fileInput.current = element;
+                  }}
                   type="file"
                 />
-                {preview ? (
-                  <img
-                    alt={`Vista previa de ${selectedFile?.name ?? "la factura"}`}
-                    className="max-h-44 max-w-full object-contain"
-                    onError={() => {
-                      clearPreview();
-                      setError("invoice", {
-                        message:
-                          "No se pudo leer esta imagen. Selecciona otro archivo.",
-                      });
-                    }}
-                    onLoad={() => setIsPreviewReady(true)}
-                    src={preview}
-                  />
-                ) : (
-                  <span className="bg-background text-muted-foreground flex size-12 items-center justify-center border">
-                    <UploadSimpleIcon
-                      aria-hidden="true"
-                      size={24}
-                      weight="light"
-                    />
-                  </span>
-                )}
+                <InvoiceImagePreview
+                  filename={selectedFile?.name}
+                  isExample={isExample}
+                  onError={() => {
+                    clearPreview();
+                    setError("invoice", {
+                      message:
+                        "No se pudo leer esta imagen. Selecciona otro archivo.",
+                    });
+                  }}
+                  onReady={() => setIsPreviewReady(true)}
+                  src={displayPreview}
+                />
                 <div className="pointer-events-none flex flex-col gap-1">
                   <p className="text-xs font-medium">
-                    {preview
+                    {displayPreview
                       ? "Haz clic para cambiar la imagen"
                       : "Haz clic para seleccionar una imagen"}
                   </p>
@@ -194,7 +259,7 @@ export const InvoiceUploadForm = ({
                 <FieldError errors={[fieldState.error]} id="invoice-error" />
               )}
             </Field>
-            {preview && (
+            {selectedFile && (
               <div className="bg-muted/20 flex min-w-0 items-center gap-3 border p-3">
                 <FileImageIcon
                   aria-hidden="true"
@@ -228,15 +293,16 @@ export const InvoiceUploadForm = ({
         <Button
           disabled={isProcessing || (preview !== null && !isPreviewReady)}
           form="invoice-upload-form"
+          onClick={isExample ? () => fileInput.current?.click() : undefined}
           size="lg"
-          type="submit"
+          type={isExample ? "button" : "submit"}
         >
           {isProcessing ? (
             <Spinner aria-hidden="true" data-icon="inline-start" />
           ) : (
             <ArrowUpRightIcon aria-hidden="true" data-icon="inline-start" />
           )}
-          {isProcessing ? "Procesando factura…" : "Subir factura"}
+          {getUploadLabel(isExample, isProcessing)}
         </Button>
         <p className="text-muted-foreground text-center text-[11px] leading-5">
           Asegúrate de que todos los datos sean visibles.

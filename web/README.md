@@ -41,7 +41,9 @@ pnpm dev
 
 Select a JPG, PNG, or WEBP image up to 4 MB and click **Subir factura**. The frontend posts multipart form data to `/api/v1/invoices/process`; Vite proxies `/api` requests to `http://127.0.0.1:5001` during development. The repository-root `vercel.json` routes production `/api` requests to the FastAPI service and other paths to the Vite service. Deploy from the repository root; see `../README.md`.
 
-The result panel displays the validated invoice JSON with English properties such as `invoice_number`, `issue_date`, `issuer`, `recipient`, and `items`, including nullable unreadable fields. Changing or removing an image clears previous results. Upload controls are disabled while processing, and failures leave the image available for another attempt. No API key is exposed to the frontend.
+On initial load, both panels show a fictitious invoice and its matching JSON, labeled **Ejemplo**. This static example makes no API requests. **Subir mi factura** opens the file picker; canceling leaves the current state unchanged. Selecting your own image clears the example result, and removing it restores the example. Reloading also restores the example; files and results are not persisted in browser storage.
+
+The result panel displays the validated invoice JSON with English properties such as `invoice_number`, `issue_date`, `issuer`, `recipient`, and `items`, including nullable unreadable fields. Changing an image clears previous results. Upload controls are disabled while processing, and failures leave the image available for another attempt. No API key is exposed to the frontend.
 
 Currently, two official plugins are available:
 

@@ -4,11 +4,15 @@ import { useState } from "react";
 import { processInvoice } from "@/features/invoices/api";
 import { InvoiceOutput } from "@/features/invoices/components/invoice-output";
 import { InvoiceUploadForm } from "@/features/invoices/components/invoice-upload-form";
+import { exampleInvoice } from "@/features/invoices/example";
 import type { InvoiceProcessingState } from "@/features/invoices/schemas";
 
 const App = () => {
   const [processingState, setProcessingState] =
-    useState<InvoiceProcessingState>({ status: "idle" });
+    useState<InvoiceProcessingState>({
+      data: exampleInvoice.data,
+      status: "example",
+    });
 
   const handleUpload = async (file: File) => {
     setProcessingState({ status: "loading" });
@@ -27,6 +31,8 @@ const App = () => {
   };
 
   const handleImageChange = () => setProcessingState({ status: "idle" });
+  const handleReset = () =>
+    setProcessingState({ data: exampleInvoice.data, status: "example" });
 
   return (
     <div className="bg-background min-h-svh">
@@ -68,8 +74,10 @@ const App = () => {
         </div>
         <div className="grid items-stretch gap-6 md:grid-cols-2">
           <InvoiceUploadForm
+            isExample={processingState.status === "example"}
             isProcessing={processingState.status === "loading"}
             onImageChange={handleImageChange}
+            onReset={handleReset}
             onUpload={handleUpload}
           />
           <InvoiceOutput state={processingState} />

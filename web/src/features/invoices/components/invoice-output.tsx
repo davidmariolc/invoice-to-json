@@ -31,16 +31,28 @@ interface InvoiceOutputProps {
 
 const statusLabels: Record<InvoiceProcessingState["status"], string> = {
   error: "No se pudo procesar la factura",
+  example: "Ejemplo ilustrativo. Datos ficticios.",
   idle: "Esperando una factura",
   loading: "Extrayendo los datos de la factura…",
   success: "Factura procesada. Revisa los datos extraídos.",
 };
 
+const getBadgeLabel = (status: InvoiceProcessingState["status"]) => {
+  if (status === "example") {
+    return "Ejemplo";
+  }
+  return status === "loading" ? "Procesando" : "JSON";
+};
+
 const InvoiceOutputBody = ({ state }: InvoiceOutputProps) => {
-  if (state.status === "success") {
+  if (state.status === "success" || state.status === "example") {
     return (
       <pre
-        aria-label="Resultado del procesamiento"
+        aria-label={
+          state.status === "example"
+            ? "Datos de la factura de ejemplo"
+            : "Resultado del procesamiento"
+        }
         className="max-h-[32rem] overflow-auto p-5 font-mono text-xs leading-6"
       >
         <code>{JSON.stringify(state.data, null, 2)}</code>
@@ -107,9 +119,7 @@ export const InvoiceOutput = ({ state }: InvoiceOutputProps) => (
         La información extraída, organizada en JSON.
       </CardDescription>
       <CardAction>
-        <Badge variant="outline">
-          {state.status === "loading" ? "Procesando" : "JSON"}
-        </Badge>
+        <Badge variant="outline">{getBadgeLabel(state.status)}</Badge>
       </CardAction>
     </CardHeader>
     <CardContent className="flex min-h-80 flex-1 flex-col">

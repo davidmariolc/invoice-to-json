@@ -48,5 +48,5 @@ export type InvoiceProcessResponse = z.infer<
 >;
 export type InvoiceProcessingState =
   | { status: "idle" | "loading" }
-  | { status: "success"; data: InvoiceData }
+  | { status: "example" | "success"; data: InvoiceData }
   | { status: "error"; message: string };
